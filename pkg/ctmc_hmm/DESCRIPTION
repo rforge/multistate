@@ -1,0 +1,45 @@
+Package: test4
+Type: Package
+Title: What the package does (short line)
+Version: 1.0
+Date: 2011-06-19
+Author: Who wrote it
+Maintainer: Who to complain to <yourfault@somewhere.net>
+Description: More about what it does (maybe more than one line)
+License: What license is it under?
+LazyLoad: yes
+ByteCompile: TRUE
+Depends:
+    Rcpp (>= 0.9.4),
+    RcppArmadillo (>= 0.2.22),
+    msm,
+    SQUAREM,
+    magic
+LinkingTo: Rcpp, RcppArmadillo, msm, SQUAREM
+Collate:
+    'EM.R'
+    'E_step_init_emission.r'
+    'cappe_first_moment.R'
+    'covariates_max.R'
+    'design_setup.r'
+    'eigen_decomp_list_R.R'
+    'expected_dur_trans.R'
+    'get_mean.R'
+    'indiv.emission.init.rate.r'
+    'joint_first_moments.r'
+    'louis.R'
+    'mat_exp_eigen_R.R'
+    'phase.hazard.r'
+    'rcpparma_forwardback.R'
+    'transition_prob_list.R'
+    'update.emission.params.R'
+    'update.init.params.r'
+    'update.rate.params.r'
+    'eigen_moment2.R'
+    'Cappe_second_moment.R'
+    'Cappe
+    functions_tau.R'
+    'transition_probs.R'
+    'trans_probs_all.R'
+    'functionals.R'
+
