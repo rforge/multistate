@@ -1,2 +1,2 @@
-useDynLib(test4)
+useDynLib(ctmc_hmm)
 exportPattern("^[[:alpha:]]+")
