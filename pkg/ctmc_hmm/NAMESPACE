@@ -1,2 +1,0 @@
-useDynLib(ctmc_hmm)
-exportPattern("^[[:alpha:]]+")
