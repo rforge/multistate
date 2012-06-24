@@ -1,11 +1,11 @@
-Package: ctmc_hmm
+Package: ctmchmm
 Type: Package
 Title: What the package does (short line)
 Version: 1.0
 Date: 2011-06-19
 Author: Jane Lange
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
+Maintainer: Jane Lange <janelange15@gmail.com>
+Description: Fitting continuous-time hidden Markov models for disease progression
 License: GPL (>= 3)
 LazyLoad: yes
 ByteCompile: TRUE
@@ -37,8 +37,7 @@ Collate:
     'update.rate.params.r'
     'eigen_moment2.R'
     'Cappe_second_moment.R'
-    'Cappe
-    functions_tau.R'
+    'Cappe_functions_tau.R'
     'transition_probs.R'
     'trans_probs_all.R'
     'functionals.R'
