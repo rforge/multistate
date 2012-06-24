@@ -1,0 +1,2 @@
+useDynLib(cthmm)
+exportPattern("^[[:alpha:]]+")
