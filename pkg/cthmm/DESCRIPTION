@@ -11,11 +11,11 @@ LazyLoad: yes
 ByteCompile: TRUE
 Depends:
     Rcpp (>= 0.9.4),
-    RcppArmadillo (>= 0.2.22),
+    RcppArmadillo (>= 0.2.2.2),
     msm,
     SQUAREM,
     magic
-LinkingTo: Rcpp, RcppArmadillo, msm, SQUAREM
+LinkingTo: Rcpp, RcppArmadillo
 Collate:
     'EM.R'
     'E_step_init_emission.r'
