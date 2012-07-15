@@ -1,6 +1,6 @@
-#include "joint_mean_markov_jumps.h"
+#include "joint_mean_markov_jumps_cpp.h"
 #include "auxmat_cpp.h"
-#include "get_mean.h"
+#include "get_mean_cpp.h"
 #include "mat_exp_eigen.h"
 
 

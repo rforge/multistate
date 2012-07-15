@@ -1,6 +1,6 @@
 #include "eigen_moments2.h"
-#include "joint_mean_markov_jumps.h"
-#include "joint_mean_markov_rewards.h"
+#include "joint_mean_markov_jumps_cpp.h"
+#include "joint_mean_markov_rewards_cpp.h"
 #include "auxmat_cpp.h"
 #include "mat_exp_eigen.h"
 

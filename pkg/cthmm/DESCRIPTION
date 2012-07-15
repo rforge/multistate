@@ -37,8 +37,10 @@ Collate:
     'update.rate.params.r'
     'eigen_moment2.R'
     'Cappe_second_moment.R'
+    'Cappe functions_tau.R'
     'Cappe_functions_tau.R'
     'transition_probs.R'
     'trans_probs_all.R'
     'functionals.R'
+
 

@@ -400,4 +400,53 @@ get_variance=function(the.data,num.subjects,num.states,num.obs.states,rate.param
   return(list(information=information))
 }
 
+init_score_louis<-function(init.setup,param.values,init.counts){
+# if(sum(init.setup$param.types==0)==0){return(c(0))}else{
+	
+	init=init.setup
+	if(!is.null(init.counts)){
+		counts=matrix(init.counts[init$states[init$states!=init$ref],],ncol=dim(init.counts)[2])
+	}
+	N_vector=rep(1,times=dim(init$covariate.array)[3])
+	
+	deriv.array=init.setup$deriv.array
+	prob.matrix=get.prob.array(init.setup$covariate.array,param.values)
+	num.subjects=dim(counts)[2]
+	suff.stat.score=array(0,dim=c(dim(counts)[1],dim(counts)[2]))  
+	param.score=array(0,dim=c(dim(deriv.array)[1],dim(counts)[2]))
+	suff.stat.score=(counts-prob.matrix*N_vector)
+	for(m in 1:num.subjects){
+        param.score[,m]=matrix(deriv.array[,,m])%*%suff.stat.score[,m]
+	}
+	return(param.score)
+# hessian=multinom.hessian(prob.matrix,deriv.array,N_vector)
+	return(param.score)
+# }
+}
+
+emission_score_louis<-function(emission.setup,emission.param.values,emission.counts){
+	out=emission.score.hessian(emission.counts,emission.param.values,emission.setup,emission.setup$deriv.array)
+	state_order=emission.setup$emission.states
+	states=out$states
+	states=data.frame(states)
+	state_order=data.frame(emission.setup$emission.states)
+	reorder=as.numeric(paste(row.names(states[state_order[,"i"]==states[,"i"]&state_order[,"j"]==states[,"j"],])))
+	
+	N_vector=apply(emission.counts,c(1,3),"sum")
+	
+#get the score for each individual
+	suff.stat.score=array(0,dim=c(dim(emission.setup$deriv.array)[2],dim(emission.setup$deriv.array)[3]))
+	
+	for(l in 1:dim(state_order)[1]){
+		suff.stat.score[l,]=emission.counts[state_order[l,"i"],state_order[l,"j"],]-out$prob.array[reorder[l],]*N_vector[state_order[l,"i"],]
+	}
+	out_score=array(0,dim=c(dim(emission.setup$deriv.array)[1],dim(emission.setup$deriv.array)[3]))
+	for(m in 1:dim(emission.setup$deriv.array)[3]){
+		out_score[,m]=emission.setup$deriv.array[,,m]%*%suff.stat.score[,m]
+	}
+	return(out_score)
+}
+
+
+
 
