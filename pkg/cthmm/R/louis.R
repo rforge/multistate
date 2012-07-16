@@ -448,5 +448,3 @@ emission_score_louis<-function(emission.setup,emission.param.values,emission.cou
 }
 
 
-
-

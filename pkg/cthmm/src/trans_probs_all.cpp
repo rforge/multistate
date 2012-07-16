@@ -1,21 +1,10 @@
-
-// includes from the plugin
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
 
-
-#ifndef BEGIN_RCPP
-#define BEGIN_RCPP
-#endif
-
-#ifndef END_RCPP
-#define END_RCPP
-#endif
-
-using namespace Rcpp;
-
-
-// user includes
+arma::mat uniformization_prob(double t, arma::mat rate);
+arma::mat mat_exp_eigen_cpp2(Rcpp::List eigen_decomp, double time_int);
+Rcpp::List trans_prob(Rcpp::List eigen_decomp, Rcpp::NumericVector time_int,int exact_time_ranks);
+RcppExport SEXP trans_probs_all(SEXP eigen_decomp_list_, SEXP time_int_list_, SEXP exact_times_list_);
 
 arma::mat uniformization_prob(double t, arma::mat rate){
 
@@ -38,9 +27,8 @@ arma::mat uniformization_prob(double t, arma::mat rate){
  return(out_sum);
 }
 
-
 arma::mat mat_exp_eigen_cpp2(Rcpp::List eigen_decomp, double time_int){
-  arma::cx_mat vectors=Rcpp::as<arma::cx_mat>(eigen_decomp["vectors"]);
+    arma::cx_mat vectors=Rcpp::as<arma::cx_mat>(eigen_decomp["vectors"]);
 	arma::cx_mat invvectors=Rcpp::as<arma::cx_mat>(eigen_decomp["invvectors"]);
 	arma::cx_colvec values=Rcpp::as<arma::cx_colvec>(eigen_decomp["values"]);
 	arma::mat rate=Rcpp::as<arma::mat>(eigen_decomp["rate"]);
@@ -62,7 +50,6 @@ Rcpp::List trans_prob(Rcpp::List eigen_decomp, Rcpp::NumericVector time_int,int 
 	for(int m=0; m<time_int.size();m++){
 		out[m]=mat_exp_eigen_cpp2(eigen_decomp,time_int[m]);
 	} 
-
   
   if(exact_time_ranks>1){
    arma::mat rate=Rcpp::as<arma::mat>(eigen_decomp["rate"]);
@@ -76,21 +63,14 @@ Rcpp::List trans_prob(Rcpp::List eigen_decomp, Rcpp::NumericVector time_int,int 
 }
 
 
-// declarations
-extern "C" {
-SEXP trans_probs_all( SEXP eigen_decomp_list_, SEXP time_int_list_, SEXP exact_times_list_) ;
-}
 
-// definition
+RcppExport SEXP trans_probs_all(SEXP eigen_decomp_list_, SEXP time_int_list_, SEXP exact_times_list_){
 
-SEXP trans_probs_all( SEXP eigen_decomp_list_, SEXP time_int_list_, SEXP exact_times_list_ ){
-BEGIN_RCPP
-
-Rcpp::List eigen_list(eigen_decomp_list_);
-Rcpp::List time_list(time_int_list_);
-Rcpp:List exact_list(exact_times_list_);
-int length=time_list.size();
-Rcpp::List out(length);
+ Rcpp::List eigen_list=Rcpp::as<Rcpp::List>(eigen_decomp_list_);
+ Rcpp::List time_list=Rcpp::as<Rcpp::List>(time_int_list_);
+ Rcpp::List exact_list=Rcpp::as<Rcpp::List>(exact_times_list_);
+ int length=time_list.size();
+ Rcpp::List out(length);
 
 for(int i=0;i<length;i++){
    Rcpp::NumericVector indivTime=Rcpp::as<Rcpp::NumericVector>(time_list[i]);
@@ -104,7 +84,6 @@ for(int i=0;i<length;i++){
 }
 return(Rcpp::wrap(out));
 
-END_RCPP
 }
 
 

@@ -1,5 +1,5 @@
 #include "auxmat_cpp.h"
-#include "joint_mean_markov_rewards_cpp.h"
+#include "joint_mean_markov_rewards.h"
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
 RcppExport SEXP test_joint_means(SEXP rate_eigen);

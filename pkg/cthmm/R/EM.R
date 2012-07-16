@@ -7,6 +7,7 @@ EM<-function(rates.setup,init.setup,emission.setup,the.data,num.subjects,num.sta
 #Inputs: rates.setup, init.setup, emission.setup, the.date,num.subjects,num.states, num.obs.states,tol
 #Outputs: List consisting of params=EM estimates for parameters and LL=final observed data log likelihood
 #################################################
+print("new package")
 rates<-rates.setup
 init<-init.setup
 emission<-emission.setup
@@ -95,7 +96,7 @@ EM.update<-function(par){
 
    params=c(0)
  if(do.rates){
-   print(par)
+#  print(par)
    update_rates = update.rate.params(rate.setup = rates, 
                 transitions = expected.trans, durations = expected.dur, 
                 current.params = par[1:num.rate.params], max.it = 2)
@@ -132,10 +133,10 @@ if (do.init) {
   LL.vec=(sapply(likelihood.forward.backward.list,"[[","LL"))
   LL=sum(LL.vec[LL.vec!=-Inf&LL.vec!="NaN"])
   LL.updates<<-c(LL.updates,LL)
-  print(LL)
+#  print(LL)
 
  
-  print(params)
+# print(params)
   param.updates<<-rbind(param.updates,params)
  
   return(params)

@@ -1,6 +1,6 @@
-#include "joint_mean_markov_rewards_cpp.h"
+#include "joint_mean_markov_rewards.h"
 #include "auxmat_cpp.h"
-#include "get_mean_cpp.h"
+#include "get_mean.h"
 
 RcppExport SEXP dur_loop(SEXP likelihood_forward_backward,SEXP time_diffs_list, SEXP eigen_decomp_list, SEXP obs_data_list, SEXP emission_list, SEXP exact_time_ranks_list,SEXP the_state_size,SEXP absorb_state);
 RcppExport SEXP trans_times(SEXP the_index, SEXP time_diffs_list, SEXP eigen_decomp_list, SEXP the_state_size, SEXP exact_time_ranks_list,SEXP absorb_state);

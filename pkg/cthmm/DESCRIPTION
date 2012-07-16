@@ -1,17 +1,17 @@
 Package: cthmm
 Type: Package
-Title: Continuous-Time Hidden Markov Models
+Title: Latent Continuous Time Markov Chains
 Version: 1.0
 Date: 2011-06-19
-Author: Jane Lange, Vladimir Minin
-Maintainer: Jane Lange <janelange15@gmail.com>
-Description: Fitting continuous-time hidden Markov models for disease progression
-License: GPL (>= 3)
+Author: Jane Lange
+Maintainer: Jane Lange <lange@u.washington.edu>
+Description: Fit latent CTMC models to multistate panel data.
+License: GSL
 LazyLoad: yes
 ByteCompile: TRUE
 Depends:
     Rcpp (>= 0.9.4),
-    RcppArmadillo (>= 0.2.2.2),
+    RcppArmadillo (>= 0.2.22),
     msm,
     SQUAREM,
     magic
@@ -31,16 +31,14 @@ Collate:
     'mat_exp_eigen_R.R'
     'phase.hazard.r'
     'rcpparma_forwardback.R'
-    'transition_prob_list.R'
     'update.emission.params.R'
     'update.init.params.r'
     'update.rate.params.r'
     'eigen_moment2.R'
     'Cappe_second_moment.R'
-    'Cappe functions_tau.R'
     'Cappe_functions_tau.R'
     'transition_probs.R'
+    'transition_prob_list.R'
     'trans_probs_all.R'
     'functionals.R'
-
 

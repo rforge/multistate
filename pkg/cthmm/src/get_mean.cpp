@@ -23,7 +23,7 @@ temp_sum=temp_sum+joint(r,s)*eemission_matrix(s,(obsdata(l+1)-1))*exp(fforward(l
 return(Rcpp::wrap(temp_sum/exp(LogLik)));
 }
 
-#include "get_mean_cpp.h"
+
 double get_mean_cpp(std::vector<arma::mat> joint_mean, arma::icolvec obs_data, arma::mat forward, arma::mat backward, double LL, arma::mat emission_matrix){
 	double temp_sum=0;
 	int state_size = emission_matrix.n_rows;
