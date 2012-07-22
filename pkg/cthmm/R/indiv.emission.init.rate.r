@@ -91,8 +91,10 @@ populate_emission_matrix=function(update_emission,emission,num.states,num.obs.st
 	for(k in 1:dim(emission$ref)[1]){
 		emission_array[emission$ref[k,"i"],emission$ref[k,"j"],]=1-apply(emission_array[emission$ref[k,"i"],,],2,"sum")
 	}
-	for(k in 1:dim(emission$exact.states)[1]){
+	if(!is.null(emission$exact.states)){
+	 for(k in 1:dim(emission$exact.states)[1]){
 		emission_array[emission$exact.states[k,"i"],emission$exact.states[k,"j"],]=1
+	 }
 	}
 	if(do.list){
 		emission_array=apply(emission_array,c(3),"list")

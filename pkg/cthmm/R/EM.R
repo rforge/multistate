@@ -1,5 +1,5 @@
 #################################################
-EM<-function(rates.setup,init.setup,emission.setup,the.data,num.subjects,num.states,num.obs.states,tol=1e-7,absorb.state){
+EM<-function(rates.setup,init.setup,emission.setup,the.data,num.subjects,num.states,num.obs.states,tol=1e-7,absorb.state,maxiter=500){
 #################################################
 #This functions runs the EM for parameterized rates, emission, and initial distributions
 # using the SQUAREM package for acceleration of updates
@@ -189,7 +189,7 @@ if (do.init) {
   
 #out <- fpiter(par=par, fixptfn=EM.update, control=list(tol=tol),objfn=objfn)
 #out <- squarem(par, fixptfn=EM.update,objfn=objfn,control=list(tol=tol,step.min0=1,maxiter=2500))
-out <- squarem(par, fixptfn=EM.update,control=list(tol=tol,step.min0=1,maxiter=200))
+out <- squarem(par, fixptfn=EM.update,control=list(tol=tol,step.min0=1,maxiter=maxiter))
 
 par=out$par
 rate=get.rate.matrix.list(current.params=par[1:num.rate.params],rate.setup=rates)[[1]]
