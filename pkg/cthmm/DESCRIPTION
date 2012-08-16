@@ -2,7 +2,7 @@ Package: cthmm
 Type: Package
 Title: Latent Continuous Time Markov Chains
 Version: 1.0
-Date: 2011-06-19
+Date: 2012-08-16
 Author: Jane Lange
 Maintainer: Jane Lange <lange@u.washington.edu>
 Description: Fit latent CTMC models to multistate panel data.
