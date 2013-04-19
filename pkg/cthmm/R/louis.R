@@ -1,3 +1,106 @@
+##############################
+#get the information and variance/covariance matrix!!
+##############################
+#' @include louis.R
+NULL
+#' Get the information matrix for the parameter esitmates from the CTMC HMM model
+#' Note: does not actually provide the variance: you need to get the inverse (or pseudo-inverse) to get the variance. 
+#' @param the.data list with the data 
+#' @param num.subjects number of subjects in the study
+#' @param num.states number of states in the CTMC
+#' @param num.obs.states number of observed states
+#' @param rate.param.values MLEs for the rate params (if not estimated, set to NULL)
+#' @param init.param.values MLEs for the initial distribution params (if not estimated, set to NULL)
+#' @param emission.param.values MLEs for the emission params (if not estimated, set to NULL)
+#' @param rates.setup list rate setup information
+#' @param init.setup list with initial distribution setup information
+#' @param emission.setup list with emission distribution setup information
+#'
+#' @return information a list with the following components
+#' \item{out}{Information matrix}
+#' \item{complete_info} the complete data information}
+#' \item{score_sq}{Conditional expectation of the square of complete data information}
+#' \item{cross_term}{Cross term in the conditional expecation of the complete data information}
+#' @export
+#' @author Jane Lange
+get_variance=function(the.data,num.subjects,num.states,num.obs.states,rate.param.values=NULL,
+emission.param.values=NULL,
+init.param.values=NULL,absorb.state=NULL,rates.setup,emission.setup,init.setup){
+	print(rates.setup[[1]])
+	ij.indices=matrix(unlist(rates.setup$transition.codes),ncol=2,byrow=F)
+	colnames(ij.indices)=c("i","j")
+	
+	obs.data.list<-lapply(the.data, "[[",c("obs.data"))
+	exact.time.ranks.list<-lapply(the.data,"[[",c("exact.times.ranks"))
+	time.diffs.list<-lapply(lapply(the.data,"[[",c("obs.times")),FUN="diff")
+	
+	rep_item<-function(i,item){
+		return(item)
+	}
+	
+	if(!is.null(rates.setup$fixed.rates)){
+		rates.list=lapply(seq(1:num.subjects), FUN="rep_item",item=rates.setup$fixed.rates)
+	}else{
+		rates.list=get.rate.matrix.list(rate.param.values,rate.setup=rates.setup)
+	}
+	if(!is.null(emission.setup$fixed.dist)){
+		emission.list=lapply(seq(1:num.subjects),FUN="rep_item",item=emission.setup$fixed.dist)
+	}else{
+		emission.list=get.emission.matrix.list(emission.param.values,emission.setup=emission.setup,num.states=num.states,num.obs.states=num.obs.states,num.subjects=num.subjects)
+	}
+	if(!is.null(init.setup$fixed.dist)){
+		delta.list=lapply(seq(1:num.subjects),FUN="rep_item",item=init.setup$fixed.dist)
+	}else{
+		delta.list=get.init.matrix.list(current.params=init.param.values,init.setup=init.setup)
+	}
+	
+	eigen.decomp.list<-eigen_decomp_list_R(rates.list) 
+	transition.probabilties.list<-mapply(time.diffs.list,eigen.decomp.list, exact.time.ranks.list,FUN=transition_prob_list,SIMPLIFY=F)
+	likelihood.forward.backward.list<-mapply(obs.data.list,transition.probabilties.list,delta.list,emission.list,FUN="forwardback_R",SIMPLIFY=F)
+	durations<-dur_loop_R(likelihood.forward.backward.list,time.diffs.list,eigen.decomp.list,obs.data.list,emission.list,exact.time.ranks.list,the_state_size=num.states,absorb_state=absorb.state)
+	transitions<-trans_loop_R(likelihood.forward.backward.list,time.diffs.list,eigen.decomp.list,obs.data.list,emission.list, exact.time.ranks.list,the_state_size=num.states,absorb_state=absorb.state,ij.indices)
+	
+	E.emission.init=E_step_emission_init_all(likelihood.forward.backward.list, obs.data.list,num.states,num.obs.states,num.subjects)
+	emission.counts=E.emission.init$emission_array
+	init.counts=E.emission.init$init_array
+	
+#get M1 and M2 lists
+	
+	M=get_M1_M2_list(rates.setup,init.setup,emission.setup,delta.list,rates.list,emission.list, obs.data.list,eigen.decomp.list,time.diffs.list,
+					 exact.time.ranks.list,transition.probabilties.list,absorb.state=absorb.state)
+	M1.list=M$M1_list
+	M2.list=M$M2_list
+	
+	information=louis_information(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
+								  rate.param.values=rate.param.values,init.param.values=init.param.values,emission.param.values=emission.param.values,durations, emission.counts,init.counts,num.subjects,transitions)
+	return(list(information=information))
+}
+
+NULL
+#' Get the information matrix using the Louis decomposition method.
+#' @param rates.setup list rate setup object
+#' @param init.setup init setup object
+#' @param emission.setup emission setup object
+#' @param init.list list with individual initial distributions
+#' @param emission.list with individual emission distributions
+#' @param rates.list with individual rate matrices
+#' @param M1.list list with conditional means of sufficient statistics for each subject
+#' @param M2.list list with 2nd moments of sufficient statistics for each subject
+#' @param rate.param.values values of rate parameters
+#' @param init.param.values values of initial distribution parameters
+#' @param emission.param.values of emission parameters
+#' @param durations array (dim num.states x num.subjects) with the expected durations 
+#' @param emission.counts array expected nunber of o_ij 's dim (num states x num.obs.states x num.subjects)
+#' @param num.subjects number of subjects in the study
+#'
+#' @return list with the following components
+#' \item{out}{Information matrix}
+#' \item{complete_info} {the complete data information}
+#' \item{score_sq}{Conditional expectation of the square of complete data information}
+#' \item{cross_term}{Cross term in the conditional expecation of the complete data information}
+#' @export
+#' @author Jane Lange
+
 louis_information<-function(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
                   rate.param.values=NULL,init.param.values=NULL,emission.param.values=NULL,durations, emission.counts,init.counts,num.subjects,transitions){
  #hessian component
@@ -96,7 +199,15 @@ for(j in 1:length(l_2)){
 return(outmatrix)
 }
 
-
+NULL
+#' get.suff.stat.table
+#'
+#' Get the information matrix using the Louis decomposition method.
+#' @param rates.setup list rate setup object
+#' @param init.setup init setup object
+#' @param emission.setup emission setup object
+#'
+#'@return a data frame with num rows=number of sufficient stats, and columns ni nj di zi Ni oi oj. If the statistic is n_12, then the corresponding column is (1,2,0,0,0,0,0)
 get.suff.stat.table<-function(rates.setup,init.setup,emission.setup){
  
   nij=matrix(nrow=1,ncol=2)
@@ -210,12 +321,15 @@ louis_decomp_score_sq<-function(rates.setup,init.setup,emission.setup,init.dist,
 }    
 
 NULL
+#'diff_theta_beta_array
 #'get an array that corresponds to diff_theta_beta for each individual in the dataset
-#' basically will be a diagonal-esque version of the deriv array
-#' @param rates.setup
-#' @param emission.setup
-#' @param init.setup
-#' @param num.subjects
+#'The "theta" params are the natural parameters encoding the rate, initial distribution, and emission matrices. 
+#'The "beta"params are paramters in the linear predictors that relate to the natural parameters. 
+#' @param rates.setup rate setup object
+#' @param emission.setup emission setup object
+#' @param init.setup init setup object
+#' @param num.subjects number of subjects
+#' @return an array of dimension (num theta param)x(num beta params)xnumber of subjects.
 diff_theta_beta_array<-function(rates.setup,emission.setup,init.setup,num.subjects){
 
  if(is.null(rates.setup$fixed.rates)){
@@ -256,60 +370,24 @@ diff_theta_beta_array<-function(rates.setup,emission.setup,init.setup,num.subjec
  }        
  return(out.array)
 }
- 
 
-    
-
-rate_hessian_louis<-function(rates.setup,rate.param.values,durations){
-  deriv.array=rates.setup$deriv.array
-  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
-  hessian=rate_hessian(rates,durations, deriv.array, rates.setup$transition.codes)
- return(hessian) 
-}
-rate_score_louis<-function(rates.setup,rate.param.values,durations,transitions){
-
-  deriv.array=rates.setup$deriv.array
-  transition.codes=rates.setup$transition.codes
-  num.trans=dim(transition.codes)[1]
-  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
-  
-  suff.stat.score=array(NA,dim=c(dim(transition.codes)[1],dim(durations)[2]))
-  score=array(0,dim=c(dim(deriv.array)[1],dim(transitions)[3]))
-  
-  
-  for(l in 1:dim(transition.codes)[1]){
-   suff.stat.score[l,]=transitions[transition.codes[l,"ni"],transition.codes[l,"nj"],]-rates[l,]*durations[transition.codes[l,"ni"],]
-  }
-  for(m in 1:dim(durations)[2]){
-        score[,m]=deriv.array[,,m]%*%suff.stat.score[,m]
-  }
- 
-  return(score)
-  
-  
-}
-
-emission_hessian_louis<-function(emission.setup, param.values,emission.counts){
-  num.subjects=dim(emission.setup$covariate.array)[3]
-  deriv.array=emission.setup$deriv.array
-  hessian=emission.score.hessian(emission_updates=emission.counts,param.values=param.values,emission=emission.setup,deriv.array=deriv.array,no.NR=0)$hessian
-  return(hessian)
-}
-
-init_hessian_louis<-function(init.setup,param.values){
-# if(sum(init.setup$param.types==0)==0){return(c(0))}else{
- deriv.array=init.setup$deriv.array
- prob.matrix=get.prob.array(init.setup$covariate.array,param.values)
- N_vector=rep(1,times=dim(init.setup$covariate.array)[3])
- hessian=multinom.hessian(prob.matrix,deriv.array,N_vector)
- return(hessian)
-# }
-}
-
-
-
+NULL
+#'get_M1_M2
+#' get the list with first and second moments of complete data sufficient statistics for an individual, using the recursive smoothing method. 
+#' @param stat.table data frame with num rows=number of sufficient stats, and columns ni nj di zi Ni oi oj. If the statistic is n_12, then the corresponding column is (1,2,0,0,0,0,0)
+#' @param time.diffs observation time intervals (single subject)
+#' @param obs.data observed data (single subject)
+#' @param eigen.decomp eigen.decomp object for rate matrix (single subject)
+#' @param exact.time.ranks number encoding the absorption time index
+#' @param absorb.state one or more absorbing states in the model
+#' @param transition.probs transition probabilities for each time interval
+#' @param emission.matrix emission matrix for subject
+#' @param init.dist initial distribution for sujbect
+#' @return list consisting of 
+#' \item {M1} {vector of first moments of complete data sufficient statistics}
+#' \item {M2} {matrix of second moments of complete data sufficient statistics}
 get_M1_M2<-function(stat.table,time.diffs,obs.data,eigen.decomp,exact.time.ranks,absorb.state,transition.probs,emission.matrix,init.dist){
-
+     
  num.states=dim(eigen.decomp$rate)[1]
  suff.stats=stat.table
 
@@ -327,8 +405,28 @@ get_M1_M2<-function(stat.table,time.diffs,obs.data,eigen.decomp,exact.time.ranks
  return(list(M1=M1,M2=M2))
 }
 
-get_M1_M2_list<-function(rates.setup,init.setup,emission.setup,delta.list,rates.list,emission.list, obs.data.list,eigen.decomp.list,time.diffs.list,exact.time.ranks.list,transition.probabilties.list,absorb.state){
- num.subjects=length(rates.list) 
+NULL
+#' get_M1_M2_list 
+#' Get a list of first and second moments for each subject
+#' @param rates.setup rate setup object
+#' @param init.setup init setup object
+#' @param emission.setup emission setup object
+#' @param delta.list list with intial distribution for each subject
+#' @param rates.list list with rates for each subject
+#' @param emission.list list with emission matrices for each subject
+#' @param obs.data.list list with obs.data for each subject
+#' @param eigen.decomp.list list with eigen.decomp objects for each subject
+#' @param time.diffs.list list with interobservation intervals for each subject
+#' @param exact.time.ranks.list list encoding the observation number of times of absorption for each subject
+#' @param transition.probabilities.list list encoding the transition probabilities for each subject
+#' @param absorb.state vector with one or more absorbing states
+#' @return a list consisting of 
+#' \item {M1_list} {list with vectors of first moments for complete data sufficient statistics}
+#' \item M2_list {list with matrices of second moments for complete data sufficient statistics}
+get_M1_M2_list<-function(rates.setup,init.setup,emission.setup,delta.list,rates.list,emission.list, obs.data.list,eigen.decomp.list,
+                         time.diffs.list,exact.time.ranks.list,transition.probabilties.list,absorb.state){
+
+  num.subjects=length(rates.list) 
  stat.table=get.suff.stat.table(rates.setup,init.setup,emission.setup)
  M1.list<-vector("list", num.subjects)
  M2.list<-vector("list",num.subjects)
@@ -340,67 +438,15 @@ get_M1_M2_list<-function(rates.setup,init.setup,emission.setup,delta.list,rates.
   }
  return(list(M1_list=M1.list, M2_list=M2.list))
 }
-
-##############################
-#get the information and variance/covariance matrix!!
-##############################
-get_variance=function(the.data,num.subjects,num.states,num.obs.states,rate.param.values=NULL,
-                      emission.param.values=NULL,
-                       init.param.values=NULL,absorb.state=NULL,rates.setup,emission.setup,init.setup){
-  print(rates.setup[[1]])
-  ij.indices=matrix(unlist(rates.setup$transition.codes),ncol=2,byrow=F)
-  colnames(ij.indices)=c("i","j")
-
-  obs.data.list<-lapply(the.data, "[[",c("obs.data"))
-  exact.time.ranks.list<-lapply(the.data,"[[",c("exact.times.ranks"))
-  time.diffs.list<-lapply(lapply(the.data,"[[",c("obs.times")),FUN="diff")
-  
-  rep_item<-function(i,item){
-    return(item)
-  }
- 
-  if(!is.null(rates.setup$fixed.rates)){
-    rates.list=lapply(seq(1:num.subjects), FUN="rep_item",item=rates.setup$fixed.rates)
-   }else{
-    rates.list=get.rate.matrix.list(rate.param.values,rate.setup=rates.setup)
-  }
-  if(!is.null(emission.setup$fixed.dist)){
-    emission.list=lapply(seq(1:num.subjects),FUN="rep_item",item=emission.setup$fixed.dist)
-  }else{
-    emission.list=get.emission.matrix.list(emission.param.values,emission.setup=emission.setup,num.states=num.states,num.obs.states=num.obs.states,num.subjects=num.subjects)
-  }
-  if(!is.null(init.setup$fixed.dist)){
-    delta.list=lapply(seq(1:num.subjects),FUN="rep_item",item=init.setup$fixed.dist)
-  }else{
-    delta.list=get.init.matrix.list(current.params=init.param.values,init.setup=init.setup)
-  }
-  
-  eigen.decomp.list<-eigen_decomp_list_R(rates.list) 
-  transition.probabilties.list<-mapply(time.diffs.list,eigen.decomp.list, exact.time.ranks.list,FUN=transition_prob_list,SIMPLIFY=F)
-  likelihood.forward.backward.list<-mapply(obs.data.list,transition.probabilties.list,delta.list,emission.list,FUN="forwardback_R",SIMPLIFY=F)
-  durations<-dur_loop_R(likelihood.forward.backward.list,time.diffs.list,eigen.decomp.list,obs.data.list,emission.list,exact.time.ranks.list,the_state_size=num.states,absorb_state=absorb.state)
-  transitions<-trans_loop_R(likelihood.forward.backward.list,time.diffs.list,eigen.decomp.list,obs.data.list,emission.list, exact.time.ranks.list,the_state_size=num.states,absorb_state=absorb.state,ij.indices)
-
-  E.emission.init=E_step_emission_init_all(likelihood.forward.backward.list, obs.data.list,num.states,num.obs.states,num.subjects)
-  emission.counts=E.emission.init$emission_array
-  init.counts=E.emission.init$init_array
-
-  #get M1 and M2 lists
-
-  M=get_M1_M2_list(rates.setup,init.setup,emission.setup,delta.list,rates.list,emission.list, obs.data.list,eigen.decomp.list,time.diffs.list,
-                  exact.time.ranks.list,transition.probabilties.list,absorb.state=absorb.state)
-  M1.list=M$M1_list
-  M2.list=M$M2_list
-
-  #information=louis_information(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
-  #                rate.param.values,init.param.values,emission.param.values,durations, emission.counts,init.counts,num.subjects,transitions)
-  information=louis_information(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
-                  rate.param.values=rate.param.values,init.param.values=init.param.values,emission.param.values=emission.param.values,durations, emission.counts,init.counts,num.subjects,transitions)
-  #vcov=solve(information$out)
-  return(list(information=information))
-}
-
+NULL
+#'init_score_louis
+#'Get the inital dist scores
+#' @param init.setup list init setup object
+#' @param init.param.values values of init dist parameters
+#' @param  init.counts matrix (num.states x num.subjects) with multinomial vector encoding the initial dist.
+#' @return score array (dim num params x number of subjects)
 init_score_louis<-function(init.setup,param.values,init.counts){
+     
 # if(sum(init.setup$param.types==0)==0){return(c(0))}else{
 	
 	init=init.setup
@@ -424,6 +470,29 @@ init_score_louis<-function(init.setup,param.values,init.counts){
 # }
 }
 
+NULL
+#'Get the complete data hessian matrix for initial dist parameters
+#' @param init.setup list init setup object
+#' @param param.values values of init parameters
+#'
+#' @return complete data hessian matrix for init parameters     
+init_hessian_louis<-function(init.setup,param.values){
+  # if(sum(init.setup$param.types==0)==0){return(c(0))}else{
+  deriv.array=init.setup$deriv.array
+  prob.matrix=get.prob.array(init.setup$covariate.array,param.values)
+  N_vector=rep(1,times=dim(init.setup$covariate.array)[3])
+  hessian=multinom.hessian(prob.matrix,deriv.array,N_vector)
+  return(hessian)
+  # }
+}
+
+NULL
+#'emission_score_louis
+#'Get the score matrix rate parameters
+#' @param emission.setup list emission setup object
+#' @param emission.param.values values of emission parameters
+#' @param emission.counts array (dim num states x num obs states x num subjects) with the (expected) counts of the o_ij  
+#' @return score array (dim num params x number of subjects)
 emission_score_louis<-function(emission.setup,emission.param.values,emission.counts){
 	out=emission.score.hessian(emission.counts,emission.param.values,emission.setup,emission.setup$deriv.array)
 	state_order=emission.setup$emission.states
@@ -446,5 +515,66 @@ emission_score_louis<-function(emission.setup,emission.param.values,emission.cou
 	}
 	return(out_score)
 }
+
+NULL
+#'emission_hessian_louis
+#'Get the complete data hessian matrix for emission parameters
+#' @param emission.setup list emission setup object
+#' @param param.values values of emission parameters
+#' @param emission.counts array (dim num states x num obs states x num subjects) with the (expected) counts of the o_ij  
+#'
+#' @return complete data hessian matrix for emission parameters
+emission_hessian_louis<-function(emission.setup, param.values,emission.counts){
+  num.subjects=dim(emission.setup$covariate.array)[3]
+  deriv.array=emission.setup$deriv.array
+  hessian=emission.score.hessian(emission_updates=emission.counts,param.values=param.values,emission=emission.setup,deriv.array=deriv.array,no.NR=0)$hessian
+  return(hessian)
+}
+NULL
+#'rate_hessian_louis
+#'Get the complete data hessian matrix for rate parameters
+#' @param rates.setup list rate setup object
+#' @param rate.param.values values of rate parameters
+#' @param durations array (dim num.states x num.subjects) with the expected durations 
+#'
+#' @return complete data hessian matrix for rate parameters
+
+rate_hessian_louis<-function(rates.setup,rate.param.values,durations){
+  deriv.array=rates.setup$deriv.array
+  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
+  hessian=rate_hessian(rates,durations, deriv.array, rates.setup$transition.codes)
+  return(hessian) 
+}
+NULL
+#'rate_score_louis
+#'Get the score matrix rate parameters
+#' @param rates.setup list rate setup object
+#' @param rate.param.values values of rate parameters
+#' @param durations array (dim num.states x num.subjects) with the expected durations 
+#' @param transitions array (dum num.states x num.states x num.subjects) with the expected transition counts 
+#' @return score array (dim num params x number of subjects)
+rate_score_louis<-function(rates.setup,rate.param.values,durations,transitions){
+  
+  deriv.array=rates.setup$deriv.array
+  transition.codes=rates.setup$transition.codes
+  num.trans=dim(transition.codes)[1]
+  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
+  
+  suff.stat.score=array(NA,dim=c(dim(transition.codes)[1],dim(durations)[2]))
+  score=array(0,dim=c(dim(deriv.array)[1],dim(transitions)[3]))
+  
+  
+  for(l in 1:dim(transition.codes)[1]){
+    suff.stat.score[l,]=transitions[transition.codes[l,"ni"],transition.codes[l,"nj"],]-rates[l,]*durations[transition.codes[l,"ni"],]
+  }
+  for(m in 1:dim(durations)[2]){
+    score[,m]=deriv.array[,,m]%*%suff.stat.score[,m]
+  }
+  
+  return(score)
+  
+  
+}
+
 
 

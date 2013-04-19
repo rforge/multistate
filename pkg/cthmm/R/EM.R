@@ -1,5 +1,40 @@
 #################################################
-EM<-function(rates.setup,init.setup,emission.setup,the.data,num.subjects,num.states,num.obs.states,tol=1e-7,absorb.state,maxiter=500){
+#This functions runs the EM for parameterized rates, emission, and initial distributions
+# using the SQUAREM package for acceleration of updates
+#Author: JL 11-24-2011
+#Inputs: rates.setup, init.setup, emission.setup, the.date,num.subjects,num.states, num.obs.states,tol
+#Outputs: List consisting of params=EM estimates for parameters and LL=final observed data log likelihood
+################################################
+#' @include EM.r
+NULL
+#' EM algorithm for HMM based on CTMC for parameterized rates, emission, and initial distributions
+#' Using the SQUAREM package for accleration of convergence.
+#' Get the MLEs for the parameters in the model (rate, initial distribution, and emission)
+#' This implementation does not use the recursive filtering method, but rather uses forward and backward probabilities.
+#'
+#' @param rates.setup list rate setup information
+#' @param init.setup list with initial distribution setup information
+#' @param emission.setup list with emission distribution setup information
+#' @param the.data list with the data 
+#' @param num.subjects number of subjects in the study
+#' @param num.states number of states in the CTMC
+#' @param num.obs.states number of observed states
+#' @param tol convergence tolerance
+#' @param absorb.state vector of one or more absorbing states
+#' @param maxiter=500
+#' @return a list of estimates from the EM:
+#' \item{params}{MLEs for model parameters}
+#' \item{param.updates}{The iterative oupdates for the parmaeter esitmates at each EM step}
+#' \item{LL.updates}{Updates of observed data likelihood at each step}
+#' \item{time}{Run time}
+#' \item{LL}{Final complete data log likelihood}
+#' @export
+#' @author Jane Lange
+
+
+#################################################
+EM<-function(rates.setup,init.setup,emission.setup,the.data,num.subjects,num.states,
+num.obs.states,tol=1e-7,absorb.state,maxiter=500){
 #################################################
 #This functions runs the EM for parameterized rates, emission, and initial distributions
 # using the SQUAREM package for acceleration of updates
@@ -133,10 +168,10 @@ if (do.init) {
   LL.vec=(sapply(likelihood.forward.backward.list,"[[","LL"))
   LL=sum(LL.vec[LL.vec!=-Inf&LL.vec!="NaN"])
   LL.updates<<-c(LL.updates,LL)
-#  print(LL)
+  print(LL)
 
  
-# print(params)
+ print(params)
   param.updates<<-rbind(param.updates,params)
  
   return(params)
