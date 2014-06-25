@@ -5,6 +5,13 @@
 RcppExport SEXP get_mean(SEXP single_joint_mean, SEXP obs_data, SEXP forward, SEXP backward, SEXP LL, SEXP emission_matrix);
 #endif
 
+#ifndef GET_MEAN_CPP_TIME_DEF_H
+#define GET_MEAN_CPP_TIME_DEF_H
+#include <RcppArmadillo.h>
+#include <Rcpp.h>
+double get_mean_cpp_time_dep_emission(std::vector<arma::mat> joint_mean, arma::icolvec obs_data, arma::mat forward, 
+									  arma::mat backward, double LL, Rcpp::List indivEmission);
+#endif
 #ifndef GET_MEAN_CPP_H
 #define GET_MEAN_CPP_H
 #include <RcppArmadillo.h>

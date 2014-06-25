@@ -41,4 +41,22 @@ double get_mean_cpp(std::vector<arma::mat> joint_mean, arma::icolvec obs_data, a
 	return(temp_sum/exp(LL));
 }
 
+double get_mean_cpp_time_dep_emission(std::vector<arma::mat> joint_mean, arma::icolvec obs_data, arma::mat forward, 
+									  arma::mat backward, double LL, Rcpp::List indivEmission){
+	double temp_sum=0;
+	int state_size = forward.n_cols;
+	arma::mat joint=joint_mean[0];
+	
+	for(int r=0; r<state_size; r++){
+		for(int s=0; s<state_size; s++){
+			for(int l=0; l<(obs_data.n_elem-1);l++){
+				joint=joint_mean[l];
+				arma::mat emission_matrix=Rcpp::as<arma::mat>(indivEmission[l+1]);
+				temp_sum=temp_sum+joint(r,s)*emission_matrix(s,(obs_data(l+1)-1))*exp(forward(l,r)+backward(l+1,s));
+			}
+		}
+	}
+	return(temp_sum/exp(LL));
+}
+
 
