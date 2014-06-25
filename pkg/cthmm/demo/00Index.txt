@@ -1,0 +1,2 @@
+run_EM  		example running the EM algorithm
+run_covariance          example to get covariance matrix for parameter estimates
