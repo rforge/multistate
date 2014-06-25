@@ -53,7 +53,12 @@ if(dim(deriv.array)[1]==0){
   return(hessian)
 }else{
 for(m in 1:dim(durations)[2]){
+  if(dim(deriv.array)[1]==1){
+    temp=deriv.array[,,m]
+    hessian=hessian+t(temp)%*%(temp*((-1)*rates[,m]*durations[transition.codes[,"ni"],m]))
+  }else{
   hessian=hessian+deriv.array[,,m]%*%(t(deriv.array[,,m])*((-1)*rates[,m]*durations[transition.codes[,"ni"],m]))
+  }
 } 
 return(hessian)
 }
@@ -84,7 +89,7 @@ get.prob.array<-function(covariate.array, param.values){
    return(t(t(exp.linear.pred)*1/(1+apply(exp.linear.pred,2,"sum"))))
 }
 
-multinom.score<-function(prob.matrix,deriv.array,counts,N_vector){
+multinom.score.old<-function(prob.matrix,deriv.array,counts,N_vector){
 #############################################
 #multinomial matrix score
 ##############################################
@@ -104,6 +109,23 @@ multinom.score<-function(prob.matrix,deriv.array,counts,N_vector){
          }
     return(param.score)
 }
+
+
+
+multinom.score<-function(prob.matrix, deriv.array, counts, N_vector) 
+{
+	num.subjects = dim(counts)[2]
+	suff.stat.score = array(0, dim = c(dim(counts)[1], dim(counts)[2]))
+	param.score = rep(0, times = dim(deriv.array)[1])
+	suff.stat.score = (counts - prob.matrix * N_vector)
+	for (m in 1:num.subjects) {
+		param.score = param.score + matrix(deriv.array[, , m],ncol=dim(deriv.array)[2]) %*% 
+		suff.stat.score[, m]
+	}
+	return(param.score)
+}
+
+
 multinom.covariance.array<-function(prob.matrix,N_vector){
 ##############################################################
 #multinomial covariance array
@@ -151,7 +173,7 @@ return(out)
 
 }
 
-emission.score.hessian<-function(emission_updates,param.values,emission,deriv.array,no.NR=0){
+emission.score.hessian.old<-function(emission_updates,param.values,emission,deriv.array,no.NR=0){
 #######################################################################
 #emission score and hessian updates
 ##############################################
@@ -173,10 +195,8 @@ hessian=array(0,dim=c(dim(deriv.array)[1],dim(deriv.array)[1]))
 hidden_states=unique(emission$emission.states["i"])
 all.states=c(0,0)
 prob.array=rep(0,length=dim(emission$covariate.array)[3])
-#prob.array=array(0,dim=c(dim(emission$emission.states)[1],dim(emission$covariate.array)[3]))
  
 for(k in 1:dim(hidden_states)[1]){
-#  states=emission$emission.states[unlist(emission$emission.states["i"])==hidden_states[k,"i"],]
   states=emission$emission.states[emission$emission.states$i==hidden_states[k,"i"],]
   cov.array.states=array(emission$covariate.array[,as.numeric(rownames(states)),],dim=c(dim(emission$covariate.array)[1],dim(states)[1],dim(emission$covariate.array)[3]))
   deriv.array.states=array(deriv.array[,as.numeric(rownames(states)),],dim=c(dim(deriv.array)[1],dim(states)[1],dim(deriv.array)[3]))
@@ -184,7 +204,6 @@ for(k in 1:dim(hidden_states)[1]){
   
   if(!no.NR){
   N_vector=N_array[hidden_states[k,"i"],]
- # counts=matrix(emission_updates[unlist(states["i"]),unlist(states["j"]),],ncol=dim(emission_updates)[3])
   counts=matrix(emission_updates[states$i,states$j,],ncol=dim(emission_updates)[3])
   score=score+multinom.score(prob.matrix,deriv.array.states,counts,N_vector)
   hessian=hessian+multinom.hessian(prob.matrix,deriv.array.states,N_vector) 
@@ -195,6 +214,49 @@ for(k in 1:dim(hidden_states)[1]){
 }
 rownames(all.states)=seq(0,(dim(all.states)[1]-1))
 return(list(score=score,hessian=hessian,states=all.states[-1,],prob.array=prob.array[-1,]))
+}
+
+
+
+emission.score.hessian=function (emission_updates, param.values, emission, deriv.array, no.NR = 0) 
+{
+	if (!no.NR) {
+		N_array = apply(emission_updates, c(1, 3), "sum")
+	}
+	score = rep(0, times = dim(deriv.array)[1])
+	hessian = array(0, dim = c(dim(deriv.array)[1], dim(deriv.array)[1]))
+	hidden_states = unique(emission$emission.states["i"])
+	all.states = c(0, 0)
+	prob.array = rep(0, length = dim(emission$covariate.array)[3])
+	for (k in 1:dim(hidden_states)[1]) {
+		
+		states = emission$emission.states[emission$emission.states$i == 
+		hidden_states[k, "i"], ]
+		
+		cov.array.states = array(emission$covariate.array[, as.numeric(rownames(states)), 
+								 ], dim = c(dim(emission$covariate.array)[1], dim(states)[1], 
+											dim(emission$covariate.array)[3]))
+		deriv.array.states = array(deriv.array[, as.numeric(rownames(states)), 
+								   ], dim = c(dim(deriv.array)[1], dim(states)[1], dim(deriv.array)[3]))
+		prob.matrix = get.prob.array(cov.array.states, param.values)
+		if (!no.NR) {
+			N_vector = N_array[hidden_states[k, "i"], ]
+			
+			counts=matrix(ncol=dim(emission_updates)[3],nrow=dim(states)[1])
+			for(l in 1:dim(states)[1]){
+				counts[l,] = matrix(emission_updates[states$i[l], states$j[l],], ncol = dim(emission_updates)[3])
+			}
+			score = score + multinom.score(prob.matrix, deriv.array.states, 
+										   counts, N_vector)
+			hessian = hessian + multinom.hessian(prob.matrix, 
+												 deriv.array.states, N_vector)
+		}
+		all.states = rbind(all.states, states)
+		prob.array = rbind(prob.array, prob.matrix)
+	}
+	rownames(all.states) = seq(0, (dim(all.states)[1] - 1))
+	return(list(score = score, hessian = hessian, states = all.states[-1, 
+				], prob.array = prob.array[-1, ]))
 }
 
 update.multinom.params<-function(current.params,covariate.array,deriv.array,param.types,counts=NULL,N_vector=NULL,max.it,no.NR=0){
@@ -212,7 +274,7 @@ update.multinom.params<-function(current.params,covariate.array,deriv.array,para
 #        no.NR (indicator =1 if not doing NR update )
 #OUTPUTS: updated values of the parameters
 #######################################################
-  #number of parameters for NR updaet
+  #number of parameters for NR update
  num.NR.params=dim(deriv.array)[1]
 
  #deriv array for NR update
@@ -223,7 +285,7 @@ update.multinom.params<-function(current.params,covariate.array,deriv.array,para
  NR.params=array(0,dim=c(num.NR.params,(max.it+1)))
  NR.params[,1]=current.params[param.types==0]
 
-score=array(0,dim=c(length(current.params),(max.it+1)))
+#score=array(0,dim=c(length(current.params),(max.it+1)))
 params=array(0,dim=c(length(current.params),(max.it+1)))
 params[,1]=current.params
  

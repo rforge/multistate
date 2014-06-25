@@ -35,7 +35,7 @@ score=array(0,dim=c(num.NR.params,(max.it+1)))
  NR.params=array(0,dim=c(num.NR.params,(max.it+1)))
  NR.params[,1]=current.params[emission$param.types==0]
 
- score=array(0,dim=c(length(current.params),(max.it+1)))
+# score=array(0,dim=c(length(current.params),(max.it+1)))
  params=array(0,dim=c(length(current.params),(max.it+1)))
  params[,1]=current.params
  

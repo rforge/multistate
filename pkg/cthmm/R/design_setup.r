@@ -47,6 +47,7 @@ NULL
 #'Get deriv arrays based on the non-fixed parameters
 #'@param param.types (not fixed if=0)
 #'@param covariate.array
+#'@export
 get.deriv.array<-function(covariate.array, param.types){
 deriv.array=array(covariate.array[param.types==0,,],dim=c(sum(param.types==0),dim(covariate.array)[2],dim(covariate.array)[3]))
 return(deriv.array)

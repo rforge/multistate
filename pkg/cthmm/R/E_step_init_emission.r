@@ -1,9 +1,23 @@
 
+
+E_step_DDO<-function(likelihood.forward.backward.list, h.list,num.states,num.subjects){
+	out=.Call("E_step_DDO_all",likelihood.forward.backward.list,h.list,num.states,num.subjects)
+	return(out)
+}
+
 E_step_emission_init_all<-function(likelihood.forward.backward.list, obs.data.list,num.states,num.obs.states,num.subjects){
 
-out=.Call("E_step_emission_init_all",likelihood.forward.backward.list,obs.data.list,num.states,num.obs.states,num.subjects)
-return(out)
+		out=.Call("E_step_emission_init_all",likelihood.forward.backward.list,obs.data.list,num.states,num.obs.states,num.subjects)
+        return(out)
 }
+
+
+E_step_emission_init_all_time_dep<-function(likelihood.forward.backward.list, obs.data.list,num.states,num.obs.states,num.subjects,total.obs.times,limits){
+  out=.Call("E_step_emission_init_all_time_dep",likelihood.forward.backward.list,obs.data.list,num.states,num.obs.states,num.subjects,total.obs.times,limits)
+  return(out)
+}
+
+
 
 ###########################################
 #Functions to do the E-step for emission and inital distributions

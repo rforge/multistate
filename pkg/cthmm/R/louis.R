@@ -1,6 +1,3 @@
-##############################
-#get the information and variance/covariance matrix!!
-##############################
 #' @include louis.R
 NULL
 #' Get the information matrix for the parameter esitmates from the CTMC HMM model
@@ -18,11 +15,12 @@ NULL
 #'
 #' @return information a list with the following components
 #' \item{out}{Information matrix}
-#' \item{complete_info} the complete data information}
+#' \item{complete_info}{the complete data information}
 #' \item{score_sq}{Conditional expectation of the square of complete data information}
 #' \item{cross_term}{Cross term in the conditional expecation of the complete data information}
 #' @export
 #' @author Jane Lange
+
 get_variance=function(the.data,num.subjects,num.states,num.obs.states,rate.param.values=NULL,
 emission.param.values=NULL,
 init.param.values=NULL,absorb.state=NULL,rates.setup,emission.setup,init.setup){
@@ -71,8 +69,11 @@ init.param.values=NULL,absorb.state=NULL,rates.setup,emission.setup,init.setup){
 	M1.list=M$M1_list
 	M2.list=M$M2_list
 	
+#information=louis_information(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
+#                rate.param.values,init.param.values,emission.param.values,durations, emission.counts,init.counts,num.subjects,transitions)
 	information=louis_information(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
 								  rate.param.values=rate.param.values,init.param.values=init.param.values,emission.param.values=emission.param.values,durations, emission.counts,init.counts,num.subjects,transitions)
+#vcov=solve(information$out)
 	return(list(information=information))
 }
 
@@ -95,11 +96,12 @@ NULL
 #'
 #' @return list with the following components
 #' \item{out}{Information matrix}
-#' \item{complete_info} {the complete data information}
+#' \item{complete_info}{the complete data information}
 #' \item{score_sq}{Conditional expectation of the square of complete data information}
 #' \item{cross_term}{Cross term in the conditional expecation of the complete data information}
 #' @export
 #' @author Jane Lange
+
 
 louis_information<-function(rates.setup,init.setup,emission.setup,delta.list,emission.list,rates.list,M1.list,M2.list,
                   rate.param.values=NULL,init.param.values=NULL,emission.param.values=NULL,durations, emission.counts,init.counts,num.subjects,transitions){
@@ -208,6 +210,7 @@ NULL
 #' @param emission.setup emission setup object
 #'
 #'@return a data frame with num rows=number of sufficient stats, and columns ni nj di zi Ni oi oj. If the statistic is n_12, then the corresponding column is (1,2,0,0,0,0,0)
+
 get.suff.stat.table<-function(rates.setup,init.setup,emission.setup){
  
   nij=matrix(nrow=1,ncol=2)
@@ -251,6 +254,7 @@ get.suff.stat.table<-function(rates.setup,init.setup,emission.setup){
   rownames(suff.stats)=seq(1,dim(suff.stats)[1])
   return(data.frame(suff.stats))
 }
+
 
 #' Get the score element indices
 #' 
@@ -370,7 +374,84 @@ diff_theta_beta_array<-function(rates.setup,emission.setup,init.setup,num.subjec
  }        
  return(out.array)
 }
+NULL
+#'rate_hessian_louis
+#'Get the complete data hessian matrix for rate parameters
+#' @param rates.setup list rate setup object
+#' @param rate.param.values values of rate parameters
+#' @param durations array (dim num.states x num.subjects) with the expected durations 
+#'
+#' @return complete data hessian matrix for rate parameters
 
+rate_hessian_louis<-function(rates.setup,rate.param.values,durations){
+  deriv.array=rates.setup$deriv.array
+  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
+  hessian=rate_hessian(rates,durations, deriv.array, rates.setup$transition.codes)
+ return(hessian) 
+}
+
+#'rate_score_louis
+#'Get the score matrix rate parameters
+#' @param rates.setup list rate setup object
+#' @param rate.param.values values of rate parameters
+#' @param durations array (dim num.states x num.subjects) with the expected durations 
+#' @param transitions array (dum num.states x num.states x num.subjects) with the expected transition counts 
+#' @return score array (dim num params x number of subjects)
+
+rate_score_louis<-function(rates.setup,rate.param.values,durations,transitions){
+
+  deriv.array=rates.setup$deriv.array
+  transition.codes=rates.setup$transition.codes
+  num.trans=dim(transition.codes)[1]
+  rates=get.rates(param.values=rate.param.values,covariate.array=rates.setup$covariate.array)
+  
+  suff.stat.score=array(NA,dim=c(dim(transition.codes)[1],dim(durations)[2]))
+  score=array(0,dim=c(dim(deriv.array)[1],dim(transitions)[3]))
+  
+  
+  for(l in 1:dim(transition.codes)[1]){
+   suff.stat.score[l,]=transitions[transition.codes[l,"ni"],transition.codes[l,"nj"],]-rates[l,]*durations[transition.codes[l,"ni"],]
+  }
+  for(m in 1:dim(durations)[2]){
+        score[,m]=deriv.array[,,m]%*%suff.stat.score[,m]
+  }
+ 
+  return(score)
+  
+  
+}
+NULL
+#'emission_hessian_louis
+#'Get the complete data hessian matrix for emission parameters
+#' @param emission.setup list emission setup object
+#' @param param.values values of emission parameters
+#' @param emission.counts array (dim num states x num obs states x num subjects) with the (expected) counts of the o_ij  
+#'
+#' @return complete data hessian matrix for emission parameters
+
+emission_hessian_louis<-function(emission.setup, param.values,emission.counts){
+  num.subjects=dim(emission.setup$covariate.array)[3]
+  deriv.array=emission.setup$deriv.array
+  hessian=emission.score.hessian(emission_updates=emission.counts,param.values=param.values,emission=emission.setup,deriv.array=deriv.array,no.NR=0)$hessian
+  return(hessian)
+}
+NULL
+#'Get the complete data hessian matrix for initial dist parameters
+#' @param init.setup list init setup object
+#' @param param.values values of init parameters
+#'
+#' @return complete data hessian matrix for init parameters     
+
+
+init_hessian_louis<-function(init.setup,param.values){
+# if(sum(init.setup$param.types==0)==0){return(c(0))}else{
+ deriv.array=init.setup$deriv.array
+ prob.matrix=get.prob.array(init.setup$covariate.array,param.values)
+ N_vector=rep(1,times=dim(init.setup$covariate.array)[3])
+ hessian=multinom.hessian(prob.matrix,deriv.array,N_vector)
+ return(hessian)
+# }
+}
 NULL
 #'get_M1_M2
 #' get the list with first and second moments of complete data sufficient statistics for an individual, using the recursive smoothing method. 
@@ -384,8 +465,9 @@ NULL
 #' @param emission.matrix emission matrix for subject
 #' @param init.dist initial distribution for sujbect
 #' @return list consisting of 
-#' \item {M1} {vector of first moments of complete data sufficient statistics}
-#' \item {M2} {matrix of second moments of complete data sufficient statistics}
+#' \item{M1}{vector of first moments of complete data sufficient statistics}
+#' \item{M2}{matrix of second moments of complete data sufficient statistics}
+
 get_M1_M2<-function(stat.table,time.diffs,obs.data,eigen.decomp,exact.time.ranks,absorb.state,transition.probs,emission.matrix,init.dist){
      
  num.states=dim(eigen.decomp$rate)[1]
@@ -421,8 +503,8 @@ NULL
 #' @param transition.probabilities.list list encoding the transition probabilities for each subject
 #' @param absorb.state vector with one or more absorbing states
 #' @return a list consisting of 
-#' \item {M1_list} {list with vectors of first moments for complete data sufficient statistics}
-#' \item M2_list {list with matrices of second moments for complete data sufficient statistics}
+#' \item{M1_list}{list with vectors of first moments for complete data sufficient statistics}
+#' \item{M2_list}{list with matrices of second moments for complete data sufficient statistics}
 get_M1_M2_list<-function(rates.setup,init.setup,emission.setup,delta.list,rates.list,emission.list, obs.data.list,eigen.decomp.list,
                          time.diffs.list,exact.time.ranks.list,transition.probabilties.list,absorb.state){
 
@@ -438,13 +520,8 @@ get_M1_M2_list<-function(rates.setup,init.setup,emission.setup,delta.list,rates.
   }
  return(list(M1_list=M1.list, M2_list=M2.list))
 }
-NULL
-#'init_score_louis
-#'Get the inital dist scores
-#' @param init.setup list init setup object
-#' @param init.param.values values of init dist parameters
-#' @param  init.counts matrix (num.states x num.subjects) with multinomial vector encoding the initial dist.
-#' @return score array (dim num params x number of subjects)
+
+
 init_score_louis<-function(init.setup,param.values,init.counts){
      
 # if(sum(init.setup$param.types==0)==0){return(c(0))}else{
