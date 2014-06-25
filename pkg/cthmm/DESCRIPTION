@@ -14,7 +14,9 @@ Depends:
     RcppArmadillo (>= 0.2.22),
     msm,
     SQUAREM,
-    magic
+    magic,
+    numDeriv,
+    corpcor
 LinkingTo: Rcpp, RcppArmadillo
 Collate:
     'EM.R'
@@ -41,4 +43,4 @@ Collate:
     'transition_prob_list.R'
     'trans_probs_all.R'
     'functionals.R'
-
+    'Numeric_hessian.R'
