@@ -51,7 +51,7 @@
 library(cthmm)
 data(DDO_data)
 
-rate.list=get.rate.matrix.list(current.params=DDO_EM$params[1:7],rate.setup=rates.setup,do.list=T)
+rates.list=get.rate.matrix.list(current.params=DDO_EM$params[1:7],rate.setup=rates.setup,do.list=T)
 
 se=se.haz.times(start=0, end=10,
 covar=covariance_DDO$covariance[1:7,1:7],
